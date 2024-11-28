@@ -19,7 +19,7 @@ function init() {
     z: 10,
     nRow: 1, /* ブロックの行数 */
     nCol: 1, /* ブロックの列数 */
-    axes: true, // 座標軸
+    axes: false, // 座標軸
   };
 
   // GUIコントローラの設定
@@ -88,7 +88,6 @@ function init() {
 
   // ボールを停止する
   function stopBall() {
-    speed = 0;
     ballLive = false;
   }
 
@@ -97,13 +96,13 @@ function init() {
     if(level == 1){
       speed = 5;
     }
-    if(level > 1 && level <= 3){
+    if(level > 1 && level <= 3 && nBrick == 0){
       speed = speed*2
-    }else if(level > 3 && level <= 6){
+    }else if(level > 3 && level <= 6 && nBrick == 0){
       speed += 3; // ボールの速度を増加
-    }else if(level > 6 && level <= 9){
+    }else if(level > 6 && level <= 9 && nBrick == 0){
       speed += 2;
-    }else if(level == 10){
+    }else if(level == 1 && nBrick == 0){
       speed = speed*1.5;
     }
     ballLive = true;
@@ -268,7 +267,7 @@ function init() {
   // ブロックの生成
   const bricks = new THREE.Group();
   function makeBricks() {
-    const color = ["white", "red", "yellow", "blue", "purple", "green"];
+    const color = ["white", "red", "yellow", "blue", "purple", "green","pink"];
     const h = 0.8; /* ブロックの高さ */
     const d = 0.4; /* ブロックの奥行 */
     const gapX = 0.1; /* 横方向の隙間 */
@@ -363,8 +362,7 @@ function init() {
         scene.background = texture;
       }
     }//else{
-    //   //レベルやボールをリセットさせる
-    //   //クリアの表示
+    // //   //レベルやボールをリセットさせる
     // }
   }
 

@@ -44,12 +44,12 @@ function init() {
   //スコア表示
   let level = 1;
   let score = 0;
-  let life = 5;
+  let life = 10;
   function setScore(score) {
     document.getElementById("score").innerText
-      = String(Math.round(score)).padStart(8, "0");
+      = String(Math.round(score)).padStart(10, "0");
     document.getElementById("life").innerText
-      = (life > 0) ? "○○○○○".substring(0, life) : "-- Game Over --";
+      = (life > 0) ? "○○○○○○○○○○".substring(0, life) : "-- Game Over --";
   }
 
   // Geometry の分割数
@@ -96,21 +96,36 @@ function init() {
     if(level == 1){
       speed = 5;
     }
-    if(level > 1 && level <= 3 && nBrick == 0){
+    if(level > 1 && level <= 2 && nBrick == 0){
       speed = speed*2
-    }else if(level > 3 && level <= 6 && nBrick == 0){
-      speed += 3; // ボールの速度を増加
-    }else if(level > 6 && level <= 9 && nBrick == 0){
-      speed += 2;
-    }else if(level == 1 && nBrick == 0){
+    }else if(level > 2 && level <= 3 && nBrick == 0){
       speed = speed*1.5;
+    }else if(level > 3 && level <= 6 && nBrick == 0){
+      speed += 2;
+    }else if(level > 6 && level <= 9 && nBrick == 0){
+      speed += 1;
+    }else if(level == 1 && nBrick == 0){
+      speed += 3;
     }
     ballLive = true;
-    if(life <= 0){
-      remakeBricks();
+    // ライフが0の場合は、ゲームの初期化処理を行う
+    if (life <= 0) {
       score = 0;
-      life = 5;
-      level = 1;
+      life = 10;
+      level = 1; // レベルを1にリセット
+      param.nRow = 1; // 行数を初期化
+      param.nCol = 1; // 列数を初期化
+
+      // ブロックと背景のリセット
+      remakeBricks(); // ブロックを再生成
+      const loader = new THREE.TextureLoader();
+      const texture = loader.load('地上.jpeg'); // 地上背景画像を再設定
+      scene.background = texture;
+
+      // GUIや表示のリセット（必要に応じて）
+      document.getElementById("level").innerText = level;
+      document.getElementById("score").innerText = String(score).padStart(8, "0");
+      document.getElementById("life").innerText = "○○○○○";
     }
   }
 
@@ -176,7 +191,9 @@ function init() {
     // 下
     if (ball.position.z + ballR > vLimit) {
       life = life-1;
+      score = score-1000;
       stopBall();
+      showLifeDownPopup(); // ライフが減ったときのポップアップ表示
     }
   }
 
@@ -267,7 +284,7 @@ function init() {
   // ブロックの生成
   const bricks = new THREE.Group();
   function makeBricks() {
-    const color = ["white", "red", "yellow", "blue", "purple", "green","pink"];
+    const color = ["white", "red", "yellow", "aqua" , "blue", "navy", "purple", "green","lime"];
     const h = 0.8; /* ブロックの高さ */
     const d = 0.4; /* ブロックの奥行 */
     const gapX = 0.1; /* 横方向の隙間 */
@@ -288,6 +305,15 @@ function init() {
           -(d + gapZ) * r
         )
         brick.geometry.computeBoundingBox();
+        if(level >= 4){
+          if(Math.random() < 0.3){
+            brick.hitCount = 2;
+          }else{
+            brick.hitCount = 1;
+          }
+        }else{
+          brick.hitCount = 1;
+        }
         bricks.add(brick);
         nBrick++;
       }
@@ -321,9 +347,15 @@ function init() {
         box.translate(brick.position);
         if (box.intersectsSphere(sphere)){
           hit = true;
-          brick.visible = false;
-          nBrick--;
-          score += (-brick.position.z + 1) * 100;
+          if(brick.hitCount > 0){
+            brick.hitCount--;
+          }if(brick.hitCount == 0){
+            brick.visible = false;
+            nBrick--;
+            score += (-brick.position.z + 1) * 100;
+            // ランダムでアイテムを生成
+            createItem(brick);
+          }
           if(nBrick == 0){
             increaseLevel();
           }
@@ -331,39 +363,6 @@ function init() {
         }
       }
     });
-  }
-
-  //レベル設定
-  function increaseLevel() {
-    level++
-    document.getElementById("level").innerText = level;
-    if(level <= 10){
-      param.nRow = Math.min(10, param.nRow + 1); // 行数を増加
-      param.nCol = Math.min(10, param.nCol + 1); // 列数を増加
-      makeBricks();
-      score += 1000*(level-1); // レベルアップ時にスコアボーナス
-      if(level <= 3){
-        speed = speed*2
-      }else if(level<=6){
-        speed += 3; // ボールの速度を増加
-        const loader = new THREE.TextureLoader();
-        const texture = loader.load('海.jpg'); // 海背景画像を指定
-        scene.background = texture;
-      }else if(level <= 9){
-        speed += 2;
-        const loader = new THREE.TextureLoader();
-        const texture = loader.load('空.png'); // 空背景画像を指定
-        scene.background = texture;
-      }else if(level == 10){
-        // 背景画像
-        speed = speed*1.5;
-        const loader = new THREE.TextureLoader();
-        const texture = loader.load('宇宙.jpg'); // 宇宙背景画像を指定
-        scene.background = texture;
-      }
-    }//else{
-    // //   //レベルやボールをリセットさせる
-    // }
   }
 
   // ブロックの再表示
@@ -374,6 +373,229 @@ function init() {
       nBrick++;
     });
   }
+
+  //アイテムの設定
+const itemTypes = ['speed_down', 'life_up', 'extra_life'];
+const items = [];  // アイテムを格納する配列
+
+// アイテムを生成する関数
+function createItem(brick) {
+  const itemType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+  
+  // アイテムの位置をブロックの位置に設定
+  const item = {
+    type: itemType,
+    mesh: new THREE.Mesh(
+      new THREE.SphereGeometry(0.3, nSeg, nSeg),
+      new THREE.MeshPhongMaterial({ color: 0xffff00 })
+    ),
+    applied: false  // 効果が既に適用されたか
+  };
+
+  item.mesh.position.set(brick.position.x, brick.position.y + 0.5, brick.position.z);
+  scene.add(item.mesh);
+
+  items.push(item); // アイテムを配列に追加
+}
+// アイテムとボールの衝突チェック
+function itemCheck() {
+  items.forEach((item, index) => {
+    if (!item.applied && item.mesh.position.distanceTo(ball.position) < (ballR + 0.3)) {
+      item.applied = true;  // 効果が適用された
+
+      // アイテムの効果を適用
+      switch (item.type) {
+        case 'speed_down':
+          speed -= 2;  // ボールの速度を下げる
+          break;
+        case 'life_up':
+          life += 1;  // ライフ回復
+          break;
+        case 'score_up':
+          score = score*2;  //　スコアが倍に
+          break;
+      }
+
+      // アイテムをシーンから削除
+      scene.remove(item.mesh);
+      items.splice(index, 1);  // アイテム配列から削除
+    }
+  });
+}
+
+
+
+  //レベル設定
+  function increaseLevel() {
+    level++
+    document.getElementById("level").innerText = level;
+    if (level == 11) {
+      showGameClearPopup();
+      stopBall();
+      score = 0;
+      life = 10;
+      level = 1; // レベルを1にリセット
+      param.nRow = 1; // 行数を初期化
+      param.nCol = 1; // 列数を初期化
+  
+      // ブロックと背景のリセット
+      remakeBricks(); // ブロックを再生成
+      const loader = new THREE.TextureLoader();
+      const texture = loader.load('地上.jpeg'); // 地上背景画像を再設定
+      scene.background = texture;
+  
+      // GUIや表示のリセット（必要に応じて）
+      document.getElementById("level").innerText = level;
+      document.getElementById("score").innerText = String(score).padStart(8, "0");
+      document.getElementById("life").innerText = "○○○○○○○○○○";
+      return;
+    }
+  
+    // ポップアップ表示
+    showLevelUpPopup(level);
+
+    if(level <= 10){
+      param.nRow = Math.min(10, param.nRow + 1); // 行数を増加
+      param.nCol = Math.min(10, param.nCol + 1); // 列数を増加
+      remakeBricks();  //新しい数のブロックを作り
+      score += 1000*(level-1); // レベルアップ時にスコアボーナス
+      if(level <= 2){
+        speed = speed*2;
+      }else if(level <= 3){
+        speed = speed*1.5;
+      }else if(level<=6){
+        speed += 2; // ボールの速度を増加
+        const loader = new THREE.TextureLoader();
+        const texture = loader.load('海.jpg'); // 海背景画像を指定
+        scene.background = texture;
+      }else if(level <= 9){
+        speed += 1;
+        const loader = new THREE.TextureLoader();
+        const texture = loader.load('空.png'); // 空背景画像を指定
+        scene.background = texture;
+      }else if(level == 10){
+        speed += 3;
+        const loader = new THREE.TextureLoader();
+        const texture = loader.load('宇宙.jpg'); // 宇宙背景画像を指定
+        scene.background = texture;
+      }
+    }
+  }
+
+// ポップアップを表示する関数(レベルアップ)
+function showLevelUpPopup(level) {
+  const popup = document.createElement('div');
+  popup.classList.add('level-up-popup');
+  popup.innerText = `Level ${level} にUP! 
+  ボーナススコアを獲得&ボールスピードが上がります`;
+  if(level == 4){
+    popup.innerText = `Level ${level} にUP! 
+    ボーナススコアを獲得&ボールスピードが上がります。
+    また、2回ボールを当てないと消せないブロックが登場します。`;
+  }
+  
+  // ポップアップを画面に追加
+  document.body.appendChild(popup);
+
+  // 一定時間後にポップアップを消す
+  setTimeout(() => {
+      popup.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(popup);
+      }, 500);  // アニメーションが終わった後に削除
+    }, 2000);  // 2秒後に消す
+  }
+
+//ポップアップを表示する関数(ライフ減少)
+function showLifeDownPopup() {
+  const popup = document.createElement('div');
+  popup.classList.add('life-down-popup'); // クラス名を変更
+  popup.innerText = `ライフが1つ減りました!
+  残りのライフは ${life} です`;
+  if (life <= 0) {
+    popup.innerText = `-- Game Over --`;
+  }
+
+  // ポップアップを画面に追加
+  document.body.appendChild(popup);
+
+  // 一定時間後にポップアップを消す
+  setTimeout(() => {
+    popup.style.opacity = '0';
+    setTimeout(() => {
+      document.body.removeChild(popup);
+    }, 500);  // アニメーションが終わった後に削除
+  }, 2000);  // 2秒後に消す
+}
+
+// ゲームクリアのポップアップを表示する関数
+function showGameClearPopup() {
+  const popup = document.createElement('div');
+  popup.classList.add('game-clear-popup');
+  popup.innerText = `ゲームクリア! おめでとうございます!
+  あなたの最終スコアは ${score} です！`;
+
+  // ポップアップを画面に追加
+  document.body.appendChild(popup);
+
+  // 一定時間後にポップアップを消す
+  setTimeout(() => {
+    popup.style.opacity = '0';
+    setTimeout(() => {
+      document.body.removeChild(popup);
+    }, 500);  // アニメーションが終わった後に削除
+  }, 3000);  // 3秒後に消す
+}
+
+  // CSSを追加（インラインスタイルでの例）
+  const style = document.createElement('style');
+  style.innerHTML = 
+  `.level-up-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 2rem;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  }
+
+  .life-down-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 2rem;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  }
+
+  .game-clear-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 2rem;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  }
+  `;
+  document.head.appendChild(style);
 
   // 光源の設定
   const light = new THREE.SpotLight(0xffffff, 1000);
@@ -407,6 +629,7 @@ function init() {
     frameCheck(); // 枠の衝突判定
     paddleCheck(); // パドルの衝突判定
     brickCheck(); // ブロックの衝突判定
+    itemCheck(); // アイテムとの衝突判定
     moveBall(delta); // ボールの移動
     setScore(score); // スコア更新
     // 再描画

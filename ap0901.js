@@ -353,8 +353,6 @@ function init() {
             brick.visible = false;
             nBrick--;
             score += (-brick.position.z + 1) * 100;
-            // ランダムでアイテムを生成
-            createItem(brick);
           }
           if(nBrick == 0){
             increaseLevel();
@@ -364,66 +362,6 @@ function init() {
       }
     });
   }
-
-  // ブロックの再表示
-  function resetBrick() {
-    nBrick = 0;
-    bricks.children.forEach((brick) => {
-      brick.visible = true;
-      nBrick++;
-    });
-  }
-
-  //アイテムの設定
-const itemTypes = ['speed_down', 'life_up', 'extra_life'];
-const items = [];  // アイテムを格納する配列
-
-// アイテムを生成する関数
-function createItem(brick) {
-  const itemType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
-  
-  // アイテムの位置をブロックの位置に設定
-  const item = {
-    type: itemType,
-    mesh: new THREE.Mesh(
-      new THREE.SphereGeometry(0.3, nSeg, nSeg),
-      new THREE.MeshPhongMaterial({ color: 0xffff00 })
-    ),
-    applied: false  // 効果が既に適用されたか
-  };
-
-  item.mesh.position.set(brick.position.x, brick.position.y + 0.5, brick.position.z);
-  scene.add(item.mesh);
-
-  items.push(item); // アイテムを配列に追加
-}
-// アイテムとボールの衝突チェック
-function itemCheck() {
-  items.forEach((item, index) => {
-    if (!item.applied && item.mesh.position.distanceTo(ball.position) < (ballR + 0.3)) {
-      item.applied = true;  // 効果が適用された
-
-      // アイテムの効果を適用
-      switch (item.type) {
-        case 'speed_down':
-          speed -= 2;  // ボールの速度を下げる
-          break;
-        case 'life_up':
-          life += 1;  // ライフ回復
-          break;
-        case 'score_up':
-          score = score*2;  //　スコアが倍に
-          break;
-      }
-
-      // アイテムをシーンから削除
-      scene.remove(item.mesh);
-      items.splice(index, 1);  // アイテム配列から削除
-    }
-  });
-}
-
-
 
   //レベル設定
   function increaseLevel() {
@@ -446,7 +384,7 @@ function itemCheck() {
   
       // GUIや表示のリセット（必要に応じて）
       document.getElementById("level").innerText = level;
-      document.getElementById("score").innerText = String(score).padStart(8, "0");
+      document.getElementById("score").innerText = String(score).padStart(10, "0");
       document.getElementById("life").innerText = "○○○○○○○○○○";
       return;
     }
@@ -480,6 +418,15 @@ function itemCheck() {
         scene.background = texture;
       }
     }
+  }
+
+  // ブロックの再表示
+  function resetBrick() {
+    nBrick = 0;
+    bricks.children.forEach((brick) => {
+      brick.visible = true;
+      nBrick++;
+    });
   }
 
 // ポップアップを表示する関数(レベルアップ)
@@ -629,7 +576,6 @@ function showGameClearPopup() {
     frameCheck(); // 枠の衝突判定
     paddleCheck(); // パドルの衝突判定
     brickCheck(); // ブロックの衝突判定
-    itemCheck(); // アイテムとの衝突判定
     moveBall(delta); // ボールの移動
     setScore(score); // スコア更新
     // 再描画

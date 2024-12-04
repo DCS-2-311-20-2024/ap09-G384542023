@@ -124,8 +124,8 @@ function init() {
 
       // GUIや表示のリセット（必要に応じて）
       document.getElementById("level").innerText = level;
-      document.getElementById("score").innerText = String(score).padStart(8, "0");
-      document.getElementById("life").innerText = "○○○○○";
+      document.getElementById("score").innerText = String(score).padStart(10, "0");
+      document.getElementById("life").innerText = "○○○○○○○○○○";
     }
   }
 

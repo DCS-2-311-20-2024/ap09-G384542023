@@ -115,6 +115,7 @@ function init() {
       level = 1; // レベルを1にリセット
       param.nRow = 1; // 行数を初期化
       param.nCol = 1; // 列数を初期化
+      items.clear();
 
       // ブロックと背景のリセット
       remakeBricks(); // ブロックを再生成
@@ -354,8 +355,8 @@ function init() {
             brick.visible = false;
             nBrick--;
             score += (-brick.position.z + 1) * 100;
-            // 10%の確率でアイテムを生成
-            if (Math.random() < 0.1) {
+            // 15%の確率でアイテムを生成
+            if (Math.random() < 0.15) {
               createItem(brick);
             }
           }
@@ -480,7 +481,8 @@ function init() {
       level = 1; // レベルを1にリセット
       param.nRow = 1; // 行数を初期化
       param.nCol = 1; // 列数を初期化
-  
+      items.clear();
+      
       // ブロックと背景のリセット
       remakeBricks(); // ブロックを再生成
       const loader = new THREE.TextureLoader();
@@ -609,7 +611,7 @@ function showGameClearPopup() {
     top: 50%;
     left: 80%;
     transform: translate(-50%, -50%);
-    background-color: rgba(255, 0, 0, 0.7);
+    background-color: rgba(255, 255, 0, 0.7);
     color: #fff;
     font-size: 1.5rem;
     padding: 10px;
@@ -684,7 +686,7 @@ function showGameClearPopup() {
   top: 70%;
   left: 20%;
   transform: translate(-50%, -50%);
-  background-color: rgba(255, 255, 0, 0.7);
+  background-color: rgba(255, 0, 0, 0.7);
   color: #000;
   font-size: 1.5rem;
   padding: 10px;

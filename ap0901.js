@@ -91,7 +91,7 @@ function init() {
     ballLive = false;
   }
 
-  // ボールを動かす
+  // ボールを動かす(レベルによってボールのスピードを変化させる)
   function startBall() {
     if(level == 1){
       speed = 5;
@@ -110,8 +110,8 @@ function init() {
     ballLive = true;
     // ライフが0の場合は、ゲームの初期化処理を行う
     if (life <= 0) {
-      score = 0;
-      life = 10;
+      score = 0; //スコアを0にリセット
+      life = 10; //ライフを10にリセット
       level = 1; // レベルを1にリセット
       param.nRow = 1; // 行数を初期化
       param.nCol = 1; // 列数を初期化
@@ -201,7 +201,7 @@ function init() {
   // パドルの作成
   const paddleR = 0.3;
   const paddleL = 1.5;
-  const paddle = new THREE.Group(); // パドルグループ
+  const paddle = new THREE.Group();
   {
     // パドル中央
     const center = new THREE.Mesh(
@@ -305,6 +305,7 @@ function init() {
           -(d + gapZ) * r
         )
         brick.geometry.computeBoundingBox();
+        //レベル4以上で2回当てないと消えないブロックをランダムに生成
         if(level >= 4){
           if(Math.random() < 0.3){
             brick.hitCount = 2;
@@ -353,7 +354,12 @@ function init() {
             brick.visible = false;
             nBrick--;
             score += (-brick.position.z + 1) * 100;
+            // 10%の確率でアイテムを生成
+            if (Math.random() < 0.1) {
+              createItem(brick);
+            }
           }
+          //ブロックが全て消えたらレベルを上げる
           if(nBrick == 0){
             increaseLevel();
           }
@@ -363,6 +369,105 @@ function init() {
     });
   }
 
+  // アイテムの設定
+  const itemSize = 1.0; // アイテムのサイズ
+  const items = new THREE.Group();
+  let speedDown = false; // スピードダウンのフラグ
+
+  function createItem(brick) {
+    //ランダム(ほぼ同確率)に出現アイテムの種類を定義
+    const itemType = Math.random() < 0.33 ? 'life' : (Math.random() < 0.5 ? 'score' : 'speed');
+    const item = new THREE.Mesh(
+      new THREE.SphereGeometry(itemSize, nSeg, nSeg),
+      new THREE.MeshPhongMaterial({ color: itemType === 'life' ? 0x00ff00 : (itemType === 'score' ? 0xff0000 : 0xffff00) })
+    );
+    
+    item.position.set(brick.position.x, brick.position.y + 1, brick.position.z);
+    item.userData.type = itemType; // アイテムの種類を格納
+    items.add(item);
+    scene.add(items);
+  }
+
+  // ボールとアイテムの衝突判定
+  function itemCheck() {
+    items.children.forEach((item) => {
+      if (item.visible) {
+        // ボールとアイテムの中心距離を計算
+        const distance = ball.position.distanceTo(item.position);
+        if (distance < ballR + itemSize) {
+          item.visible = false;
+          
+          // アイテムの種類に応じた処理
+          if (item.userData.type === 'life') {
+            life = Math.min(life + 1, 10);
+            showLifeBonusPopup(); // ライフが増えたポップアップを表示
+          } else if (item.userData.type === 'score') {
+            score *= 2;
+            showScoreBonusPopup(); // スコア2倍のポップアップを表示
+          }else if (item.userData.type === 'speed') {
+            SpeedBonus(); //スピードに関するメソッドの呼び出し
+          }
+        }
+      }
+    });
+  }
+
+  // スピードダウンの効果を有効化
+  function SpeedBonus() {
+    if (!speedDown) {
+      speedDown = true;
+      speed *= 0.5; // ボールスピードを0.5倍に
+      setTimeout(() => {
+        speed *= 2; // スピードを元に戻す
+        speedDown = false;
+      }, 10000); // 10秒間スピードダウン
+    showSpeedBonusPopup(); // スピードダウンのポップアップを表示
+    }
+  }
+
+  // スピードダウンのポップアップ
+  function showSpeedBonusPopup() {
+    const popup = document.createElement('div');
+    popup.classList.add('speed-bonus-popup');
+    popup.innerText = `ボールスピードが1/2になりました! 10秒間スピードが下がります`;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+      popup.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(popup);
+      }, 500); // アニメーションが終わった後に削除
+    }, 2000); // 2秒後に消す
+  }
+
+  //ライフボーナスのポップアップ
+  function showLifeBonusPopup() {
+    const popup = document.createElement('div');
+    popup.classList.add('life-bonus-popup');
+    popup.innerText = `ライフが1つ増えました! 残りライフ: ${life}`;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+      popup.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(popup);
+      }, 500); // アニメーションが終わった後に削除
+    }, 2000); // 2秒後に消す
+  }
+
+  //スコアボーナスのポップアップ
+  function showScoreBonusPopup() {
+    const popup = document.createElement('div');
+    popup.classList.add('score-bonus-popup');
+    popup.innerText = `スコアが2倍になりました! 現在のスコア: ${score}`;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+      popup.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(popup);
+      }, 500); // アニメーションが終わった後に削除
+    }, 2000); // 2秒後に消す
+  }
+
+
   //レベル設定
   function increaseLevel() {
     level++
@@ -370,8 +475,8 @@ function init() {
     if (level == 11) {
       showGameClearPopup();
       stopBall();
-      score = 0;
-      life = 10;
+      score = 0; //スコアを0にリセット
+      life = 10; //ライフを0にリセット
       level = 1; // レベルを1にリセット
       param.nRow = 1; // 行数を初期化
       param.nCol = 1; // 列数を初期化
@@ -389,9 +494,10 @@ function init() {
       return;
     }
   
-    // ポップアップ表示
+    // レベルアップのポップアップ表示
     showLevelUpPopup(level);
 
+    //レベルが上がるごとにスピードが上昇、ブロック数が増加し、背景画像もレベルに応じて変更
     if(level <= 10){
       param.nRow = Math.min(10, param.nRow + 1); // 行数を増加
       param.nCol = Math.min(10, param.nCol + 1); // 列数を増加
@@ -497,7 +603,23 @@ function showGameClearPopup() {
   // CSSを追加（インラインスタイルでの例）
   const style = document.createElement('style');
   style.innerHTML = 
-  `.level-up-popup {
+  `
+  .speed-bonus-popup {
+    position: fixed;
+    top: 50%;
+    left: 80%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 0, 0, 0.7);
+    color: #fff;
+    font-size: 1.5rem;
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+  }
+
+  .level-up-popup {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -541,7 +663,37 @@ function showGameClearPopup() {
   opacity: 1;
   transition: opacity 0.5s ease;
   }
-  `;
+
+  .life-bonus-popup {
+  position: fixed;
+  top: 30%;
+  left: 20%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 255, 0, 0.7);
+  color: #fff;
+  font-size: 1.5rem;
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+ }
+
+ .score-bonus-popup {
+  position: fixed;
+  top: 70%;
+  left: 20%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 0, 0.7);
+  color: #000;
+  font-size: 1.5rem;
+  padding: 10px;
+  border-radius: 10px;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+ }
+`;
   document.head.appendChild(style);
 
   // 光源の設定
@@ -576,6 +728,7 @@ function showGameClearPopup() {
     frameCheck(); // 枠の衝突判定
     paddleCheck(); // パドルの衝突判定
     brickCheck(); // ブロックの衝突判定
+    itemCheck(); // アイテムとの衝突判定
     moveBall(delta); // ボールの移動
     setScore(score); // スコア更新
     // 再描画

@@ -612,7 +612,7 @@ function showGameClearPopup() {
     left: 80%;
     transform: translate(-50%, -50%);
     background-color: rgba(255, 255, 0, 0.7);
-    color: #fff;
+    color: #000;
     font-size: 1.5rem;
     padding: 10px;
     border-radius: 10px;
@@ -672,7 +672,7 @@ function showGameClearPopup() {
   left: 20%;
   transform: translate(-50%, -50%);
   background-color: rgba(0, 255, 0, 0.7);
-  color: #fff;
+  color: #000;
   font-size: 1.5rem;
   padding: 10px;
   border-radius: 10px;
